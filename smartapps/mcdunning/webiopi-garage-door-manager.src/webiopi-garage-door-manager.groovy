@@ -105,13 +105,13 @@ def response(evt){
  	def msg = parseLanMessage(evt.description);
  	if(msg && msg.body){
     	// This is the GPIO headder state message
-    	if(msg.json) {
+    	if(msg.json && msg.json.GPIO) {
         	def sensor = getChildDevices().find{ d -> d.deviceNetworkId.startsWith(getGarageDoorControllerId()) }
             log.debug "Cycle Count:  ${state.cycleCount}"
             if(sensor && state.cycleCount != -1) {
                 def gpioData = msg.json.GPIO
-          		def doorOpenSensorPinValue = msg.json.GPIO.get(doorOpenSensorPin).value
-                def doorClosedSensorPinValue = msg.json.GPIO.get(doorClosedSensorPin).value
+          		def doorOpenSensorPinValue = gpioData.get(doorOpenSensorPin).value
+                def doorClosedSensorPinValue = gpioData.get(doorClosedSensorPin).value
                 log.debug "Door Open Sensor Pin Value (${doorOpenSensorPin}) = ${doorOpenSensorPinValue}"
                 log.debug "Door Close Sensor Pin Value (${doorClosedSensorPin}) = ${doorClosedSensorPinValue}"
                 
@@ -189,6 +189,7 @@ def updateGPIOState() {
 	
     executeRequest("/*", "GET")
     if (state.cycleCount != 10 && state.cycleCount != -1) {
+    	log.debug "Door in Open/Close cycle.  Cycle count is ${state.cycleCount}"
     	runIn(5, updateGPIOState)
     }
     
