@@ -103,34 +103,33 @@ def response(evt){
 	log.debug "Handling Response"
     
  	def msg = parseLanMessage(evt.description);
- 	if(msg && msg.body){
-    	// This is the GPIO headder state message
-    	if(msg.json && msg.json.GPIO) {
-        	def sensor = getChildDevices().find{ d -> d.deviceNetworkId.startsWith(getGarageDoorControllerId()) }
-            log.debug "Cycle Count:  ${state.cycleCount}"
-            if(sensor && state.cycleCount != -1) {
-                def gpioData = msg.json.GPIO
-          		def doorOpenSensorPinValue = gpioData.get(doorOpenSensorPin).value
-                def doorClosedSensorPinValue = gpioData.get(doorClosedSensorPin).value
-                log.debug "Door Open Sensor Pin Value (${doorOpenSensorPin}) = ${doorOpenSensorPinValue}"
-                log.debug "Door Close Sensor Pin Value (${doorClosedSensorPin}) = ${doorClosedSensorPinValue}"
+ 	if(msg && msg.json && msg.json.GPIO){
+    	def sensor = getChildDevices().find{ d -> d.deviceNetworkId.startsWith(getGarageDoorControllerId()) }
+        log.debug "Cycle Count:  ${state.cycleCount}"
+        if(sensor && state.cycleCount != -1) {
+        	def gpioData = msg.json.GPIO
+          	def doorOpenSensorPinValue = gpioData.get(doorOpenSensorPin).value
+            def doorClosedSensorPinValue = gpioData.get(doorClosedSensorPin).value
+             
+            log.debug "Door Open Sensor Pin Value (${doorOpenSensorPin}) = ${doorOpenSensorPinValue}"
+            log.debug "Door Close Sensor Pin Value (${doorClosedSensorPin}) = ${doorClosedSensorPinValue}"
                 
-                if (doorOpenSensorPinValue == 1 || doorClosedSensorPinValue == 1) {
-                    state.cycleCount = 10
-                    if (doorOpenSensorPinValue == 1) {
-                    	sensor.changeSwitchState(0)
-                	} else if (doorClosedSensorPinValue == 1) {
-                		sensor.changeSwitchState(1)
-                    }
+            if (doorOpenSensorPinValue == 1 || doorClosedSensorPinValue == 1) {
+            	state.cycleCount = 10
+                if (doorOpenSensorPinValue == 1) {
+                	sensor.changeSwitchState(0)
+                } else if (doorClosedSensorPinValue == 1) {
+                	sensor.changeSwitchState(1)
+                }
+            } else {
+                // Door sensor pins are both reporting 0
+                // Both pins should not be able to report 1 at the same time
+                if (state.cycleCount < 10) {
+                    state.cycleCount = state.cycleCount + 1
                 } else {
-                	// Door sensor pins are both reporting 0
-                    // Both pins should not be able to report 1 at the same time
-                	if (state.cycleCount < 10) {
-                    	state.cycleCount = state.cycleCount + 1
-                    } else {
-                    	sensor.changeSwitchState(-1)
-                        sendNotification("Failed to determine if the garage door is opened or closed", [method: "push"])
-                    }
+                    state.cycleCount = 0
+                    sensor.changeSwitchState(-1)
+                    updateGPIOState()
                 }
             }
 		}
