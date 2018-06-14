@@ -116,7 +116,15 @@ def changeSwitchState(newState) {
         	sendEvent(name: "door", value: "open")
             break
         case -1:
-        	sendEvent(name: "door", value: "unknown")
+        	def currentSwitchState = device.currentValue("door")
+            if (currentSwitchState.equals("closed")) {
+            	sendEvent(name: "door", value: "opening")
+            } else if (currentSwitchState.equals("open")) {
+            	sendEvent(name: "door", value:"closing")
+            } else {
+        		sendEvent(name: "door", value: "unknown")
+                sendNotification("Failed to determine if the garage door is opened or closed", [method: "push"])
+            }
             break;
     }
 }
